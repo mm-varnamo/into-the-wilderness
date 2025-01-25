@@ -1,13 +1,13 @@
-import React from 'react';
 import Input from '../../ui/Input';
 import Form from '../../ui/Form';
-import { useForm } from 'react-hook-form';
+import { FieldValues, useForm } from 'react-hook-form';
 import Button from '../../ui/Button';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createCabin } from '../../services/apiCabins';
 import toast from 'react-hot-toast';
 import Textarea from '../../ui/Textarea';
 import FormRow from '../../ui/FormRow';
+import FileInput from '../../ui/FileInput';
 
 const CreateCabinForm = () => {
 	const { register, handleSubmit, reset, getValues, formState } = useForm();
@@ -29,8 +29,8 @@ const CreateCabinForm = () => {
 		onError: (error) => toast.error(error.message),
 	});
 
-	const onSubmit = (data) => {
-		mutate(data);
+	const onSubmit = (data: FieldValues) => {
+		mutate({ ...data, image: data.image[0] });
 	};
 
 	return (
@@ -110,7 +110,14 @@ const CreateCabinForm = () => {
 			</FormRow>
 
 			<FormRow label='Cabin photo' error={errors?.image?.message as string}>
-				<Input accept='image/*' id='image' />
+				<FileInput
+					accept='image/*'
+					id='image'
+					type='file'
+					{...register('image', {
+						required: 'This field is required',
+					})}
+				/>
 			</FormRow>
 
 			<FormRow>

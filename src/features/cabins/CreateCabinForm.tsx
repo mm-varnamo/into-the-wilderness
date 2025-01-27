@@ -3,22 +3,26 @@ import Form from '../../ui/Form';
 import { FieldValues, useForm } from 'react-hook-form';
 import Button from '../../ui/Button';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createCabin } from '../../services/apiCabins';
+import { createEditCabin } from '../../services/apiCabins';
 import toast from 'react-hot-toast';
 import Textarea from '../../ui/Textarea';
 import FormRow from '../../ui/FormRow';
 import FileInput from '../../ui/FileInput';
 
-const CreateCabinForm = () => {
-	const { register, handleSubmit, reset, getValues, formState } = useForm();
+const CreateCabinForm = ({ cabinToEdit }) => {
+	const { id: editId, ...editValues } = cabinToEdit ? cabinToEdit : {};
+	const isEditSession = Boolean(editId);
+
+	const { register, handleSubmit, reset, getValues, formState } = useForm({
+		defaultValues: isEditSession ? editValues : {},
+	});
 
 	const { errors } = formState;
-	console.log(errors);
 
 	const queryClient = useQueryClient();
 
-	const { mutate, isPending } = useMutation({
-		mutationFn: createCabin,
+	const { mutate: createCabin, isPending: isCreating } = useMutation({
+		mutationFn: createEditCabin,
 		onSuccess: () => {
 			toast.success('New cabin successfully created');
 			queryClient.invalidateQueries({
@@ -29,9 +33,29 @@ const CreateCabinForm = () => {
 		onError: (error) => toast.error(error.message),
 	});
 
+	const { mutate: editCabin, isPending: isEditing } = useMutation({
+		mutationFn: ({ newCabinData, id }) => createEditCabin(newCabinData, id),
+		onSuccess: () => {
+			toast.success('Cabin successfully edited');
+			queryClient.invalidateQueries({
+				queryKey: ['cabins'],
+			});
+			reset();
+		},
+		onError: (error) => toast.error(error.message),
+	});
+
 	const onSubmit = (data: FieldValues) => {
-		mutate({ ...data, image: data.image[0] });
+		const image = typeof data.image === 'string' ? data.image : data.image[0];
+
+		if (isEditSession) {
+			editCabin({ newCabinData: { ...data, image }, id: editId });
+		} else {
+			createCabin({ ...data, image: image });
+		}
 	};
+
+	const isWorking = isCreating || isEditing;
 
 	return (
 		<Form onSubmit={handleSubmit(onSubmit)}>
@@ -39,7 +63,7 @@ const CreateCabinForm = () => {
 				<Input
 					type='text'
 					id='name'
-					disabled={isPending}
+					disabled={isWorking}
 					{...register('name', {
 						required: 'This field is required',
 					})}
@@ -53,7 +77,7 @@ const CreateCabinForm = () => {
 				<Input
 					type='number'
 					id='maxCapacity'
-					disabled={isPending}
+					disabled={isWorking}
 					{...register('maxCapacity', {
 						required: 'This field is required',
 						min: {
@@ -71,7 +95,7 @@ const CreateCabinForm = () => {
 				<Input
 					type='number'
 					id='regularPrice'
-					disabled={isPending}
+					disabled={isWorking}
 					{...register('regularPrice', {
 						required: 'This field is required',
 						min: {
@@ -86,7 +110,7 @@ const CreateCabinForm = () => {
 				<Input
 					type='number'
 					id='discount'
-					disabled={isPending}
+					disabled={isWorking}
 					{...register('discount', {
 						required: 'This field is required',
 						validate: (value) =>
@@ -102,7 +126,7 @@ const CreateCabinForm = () => {
 			>
 				<Textarea
 					id='description'
-					disabled={isPending}
+					disabled={isWorking}
 					{...register('description', {
 						required: 'This field is required',
 					})}
@@ -115,7 +139,7 @@ const CreateCabinForm = () => {
 					id='image'
 					type='file'
 					{...register('image', {
-						required: 'This field is required',
+						required: isEditSession ? false : 'This field is required',
 					})}
 				/>
 			</FormRow>
@@ -125,8 +149,8 @@ const CreateCabinForm = () => {
 					<Button $variation='secondary' size='medium' type='reset'>
 						Cancel
 					</Button>
-					<Button disabled={isPending} $variation='primary' size='medium'>
-						Add cabin
+					<Button disabled={isWorking} $variation='primary' size='medium'>
+						{isEditSession ? 'Edit cabin' : 'Create new cabin'}
 					</Button>
 				</>
 			</FormRow>

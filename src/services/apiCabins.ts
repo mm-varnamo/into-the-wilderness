@@ -1,3 +1,4 @@
+import { FieldValues } from 'react-hook-form';
 import supabase, { supabaseUrl } from './supabase';
 
 export const getCabins = async () => {
@@ -10,27 +11,41 @@ export const getCabins = async () => {
 	return data;
 };
 
-// interface CabinType {
-// 	name: string;
-// 	maxCapacity: number;
-// 	regularPrice: number;
-// 	discount: number;
-// 	description: string;
-// 	image: string;
-// }
+export const createEditCabin = async (newCabin?: FieldValues, id?: number) => {
+	console.log(newCabin, id);
 
-export const createCabin = async (newCabin) => {
-	const imageName = `${Math.random()}-${newCabin.image.name}`.replaceAll(
+	const hasImagePath = newCabin?.image?.startsWith?.(supabaseUrl);
+
+	console.log(hasImagePath);
+
+	const imageName = `${Math.random()}-${newCabin?.image.name}`.replaceAll(
 		'/',
 		''
 	);
 
-	const imagePath = `${supabaseUrl}/storage/v1/object/public/cabin-images/${imageName}`;
+	const imagePath = hasImagePath
+		? newCabin?.image
+		: `${supabaseUrl}/storage/v1/object/public/cabin-images/${imageName}`;
 	// https://hypijuucusopsqmswwlj.supabase.co/storage/v1/object/public/cabin-images/cabin-001.jpg
-	const { data, error } = await supabase
-		.from('cabins')
-		.insert([{ ...newCabin, image: imagePath }])
-		.select();
+
+	// 1. Create/Edit cabin
+	let query = supabase.from('cabins');
+
+	// A) Create a new cabin
+	if (!id) {
+		query = query.insert([{ ...newCabin, image: imagePath }]);
+	}
+
+	// B) Edit a cabin
+
+	if (id) {
+		query = query
+			.update({ ...newCabin, image: imagePath })
+			.eq('id', id)
+			.select();
+	}
+
+	const { data, error } = await query.select().single();
 
 	if (error) {
 		console.error(error);
@@ -39,7 +54,7 @@ export const createCabin = async (newCabin) => {
 
 	const { error: storageError } = await supabase.storage
 		.from('cabin-images')
-		.upload(imageName, newCabin.image);
+		.upload(imageName, newCabin?.image);
 
 	if (storageError) {
 		await supabase.from('cabins').delete().eq('id', data.id);

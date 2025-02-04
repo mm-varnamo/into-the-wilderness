@@ -11,10 +11,10 @@ export const getSettings = async () => {
 	return data;
 };
 
-export const updateSettings = async (newSettings) => {
+export const updateSetting = async (newSetting: { [key: string]: string }) => {
 	const { data, error } = await supabase
 		.from('settings')
-		.update(newSettings)
+		.update(newSetting)
 		.eq('id', 1)
 		.single();
 

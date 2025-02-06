@@ -1,4 +1,4 @@
-import { ReactElement } from 'react';
+import { cloneElement, createContext, useContext, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { HiXMark } from 'react-icons/hi2';
 import styled from 'styled-components';
@@ -49,23 +49,78 @@ const Button = styled.button`
 	}
 `;
 
-interface ModalProps {
-	children: ReactElement;
-	onClose: () => void;
+interface ModalContextType {
+	openName: string;
+	close: () => void;
+	open: (name: string) => void;
 }
 
-const Modal = ({ children, onClose }: ModalProps) => {
+const ModalContext = createContext<ModalContextType | undefined>(undefined);
+
+interface ModalProps {
+	children: React.ReactNode;
+}
+
+const Modal = ({ children }: ModalProps) => {
+	const [openName, setOpenName] = useState('');
+
+	const close = () => setOpenName('');
+	const open = setOpenName;
+
+	return (
+		<ModalContext.Provider value={{ openName, close, open }}>
+			{children}
+		</ModalContext.Provider>
+	);
+};
+
+interface OpenProps {
+	children: React.ReactElement;
+	opens: string;
+}
+
+const Open = ({ children, opens: opensWindowName }: OpenProps) => {
+	const context = useContext(ModalContext);
+	if (!context) {
+		throw new Error('Open must be used within a ModalProvider');
+	}
+
+	const { open } = context;
+
+	return cloneElement(children, {
+		onClick: () => open(opensWindowName),
+	});
+};
+
+interface WindowProps {
+	children: React.ReactElement;
+	name: string;
+}
+
+const Window = ({ children, name }: WindowProps) => {
+	const context = useContext(ModalContext);
+	if (!context) {
+		throw new Error('Window must be used within a ModalProvider');
+	}
+
+	const { openName, close } = context;
+
+	if (name !== openName) return null;
+
 	return createPortal(
 		<Overlay>
 			<StyledModal>
-				<Button onClick={onClose}>
+				<Button onClick={close}>
 					<HiXMark />
 				</Button>
-				<div>{children}</div>
+				<div>{cloneElement(children, { onCloseModal: close })}</div>
 			</StyledModal>
 		</Overlay>,
 		document.body
 	);
 };
+
+Modal.Open = Open;
+Modal.Window = Window;
 
 export default Modal;

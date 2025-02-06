@@ -7,8 +7,17 @@ import FormRow from '../../ui/FormRow';
 import FileInput from '../../ui/FileInput';
 import { useCreateCabin } from './useCreateCabin';
 import { useEditCabin } from './useEditCabin';
+import { Cabin as CabinType } from '../../types/cabin.types';
 
-const CreateCabinForm = ({ cabinToEdit }) => {
+interface CreateCabinFormProps {
+	cabinToEdit?: CabinType;
+	onCloseModal?: () => void;
+}
+
+const CreateCabinForm = ({
+	cabinToEdit,
+	onCloseModal,
+}: CreateCabinFormProps) => {
 	const { id: editId, ...editValues } = cabinToEdit ? cabinToEdit : {};
 	const isEditSession = Boolean(editId);
 
@@ -34,7 +43,10 @@ const CreateCabinForm = ({ cabinToEdit }) => {
 			createCabin(
 				{ ...data, image: image },
 				{
-					onSuccess: () => reset(),
+					onSuccess: () => {
+						reset();
+						onCloseModal?.();
+					},
 				}
 			);
 		}
@@ -43,7 +55,10 @@ const CreateCabinForm = ({ cabinToEdit }) => {
 	const isWorking = isCreating || isEditing;
 
 	return (
-		<Form onSubmit={handleSubmit(onSubmit)}>
+		<Form
+			onSubmit={handleSubmit(onSubmit)}
+			type={onCloseModal ? 'modal' : 'regular'}
+		>
 			<FormRow label='Cabin name' error={errors?.name?.message as string}>
 				<Input
 					type='text'
@@ -131,7 +146,12 @@ const CreateCabinForm = ({ cabinToEdit }) => {
 
 			<FormRow>
 				<>
-					<Button $variation='secondary' size='medium' type='reset'>
+					<Button
+						$variation='secondary'
+						size='medium'
+						type='reset'
+						onClick={() => onCloseModal?.()}
+					>
 						Cancel
 					</Button>
 					<Button disabled={isWorking} $variation='primary' size='medium'>

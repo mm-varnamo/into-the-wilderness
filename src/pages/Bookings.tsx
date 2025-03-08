@@ -1,4 +1,3 @@
-import React from 'react';
 import Row from '../ui/Row';
 import Heading from '../ui/Heading';
 
